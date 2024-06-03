@@ -2,9 +2,23 @@ from openai import OpenAI
 import asyncio
 import openspace
 import json
+import speech_recognition as sr
+
+r = sr.Recognizer()
+with sr.Microphone() as source:
+    print("Listening to the microphone")
+    audio = r.listen(source, phrase_time_limit=3)
+
+try:
+    print("Whisper thinks you said " + r.recognize_whisper(audio, language="english"))
+except sr.UnknownValueError:
+    print("Whisper could not understand audio")
+except sr.RequestError as e:
+    print(f"Could not request results from Whisper; {e}")
+
+exit(0)
 
 ai = OpenAI()
-
 
 OPENSPACE_ADDRESS = 'localhost'
 OPENSPACE_PORT = 4681
@@ -41,6 +55,7 @@ Examples Below
 
     completion = ai.chat.completions.create(
       model="gpt-3.5-turbo",
+      response_format={ "type": "json_object" },
       messages=[
         {"role": "system", "content": system_prompt },
         {"role": "user", "content": user_prompt }

@@ -1,0 +1,5 @@
+openai==1.30.5
+# llama_cpp_python==0.2.76
+PyAudio==0.2.14
+SpeechRecognition==3.10.4
+openspace-api==0.1.0
