@@ -4,21 +4,9 @@ import openspace
 import json
 import speech_recognition as sr
 
-r = sr.Recognizer()
-with sr.Microphone() as source:
-    print("Listening to the microphone")
-    audio = r.listen(source, phrase_time_limit=3)
+sr_rec = sr.Recognizer()
 
-try:
-    print("Whisper thinks you said " + r.recognize_whisper(audio, language="english"))
-except sr.UnknownValueError:
-    print("Whisper could not understand audio")
-except sr.RequestError as e:
-    print(f"Could not request results from Whisper; {e}")
-
-exit(0)
-
-ai = OpenAI()
+ai = None
 
 OPENSPACE_ADDRESS = 'localhost'
 OPENSPACE_PORT = 4681
@@ -29,43 +17,64 @@ os = openspace.Api(OPENSPACE_ADDRESS, OPENSPACE_PORT)
 disconnect = asyncio.Event()
 
 
-async def query_ai(query):
-    # return { "navigate": "Sun" }
+class AI:
+    def __init__(self, targets):
+        self.client = OpenAI()
+        self.targets = targets
+        self.conversation_history = []
+        self.max_history = 10  # must be even (1 question + 1 answer)
+        self.system_prompt = f'''
+            You are a computer system that drives OpenSpace, an astrophysics visualization software. You are issued prompts by the user and reply JSON objects to execute the prompted task.
+            It is important that you follow exactly the text format given in the examples below. the JSON object must always be valid.
 
-    system_prompt = '''
-You are a computer system that drives OpenSpace, an astrophysics visualization software. You are issued prompts by the user and reply JSON objects to execute the prompted task.
-It is important that you follow exactly the text format given in the examples below. the JSON object must always be valid.
+            valid JSON keys are:
+             - "navigate": go to a named entity, e.g. Earth, ISS, Sun, Milky Way, etc.
+             - "zoom": move camera closer or further.
+             - "explain": give an explanation to the question.
 
-valid json keys are:
- - "navigate": go to a named entity, e.g. Earth, ISS, Sun, Milky Way, etc.
- - "zoom": move camera closer or further.
- - "explain": give an explanation to the question.
+            valid values for "navigate" are: {', '.join(f'"{t}"' for t in targets)}
  
-Examples Below
+            Examples Below
 
-<user> "Go to the Moon"
-<system> { "navigate": "Moon" }
-<user> "What is the diameter of the Moon?"
-<system> { "explain": "The diameter of the Moon is 3474 kilometers." }
-<user> "Can you move the camera further?"
-<system> { "zoom": -1 }
-'''
+            <user> "Go to the Moon"
+            <system> {{ "navigate": "Moon" }}
+            <user> "What is the diameter of the Moon?"
+            <system> {{ "explain": "The diameter of the Moon is 3474 kilometers." }}
+            <user> "Can you move the camera further?"
+            <system> {{ "zoom": -1 }}
+        '''
 
-    user_prompt = f'<user> "{query}"\n<system> '
+    def query(self, prompt):
+        # return { "navigate": "Sun" }
 
-    completion = ai.chat.completions.create(
-      model="gpt-3.5-turbo",
-      response_format={ "type": "json_object" },
-      messages=[
-        {"role": "system", "content": system_prompt },
-        {"role": "user", "content": user_prompt }
-      ]
-    )
+        user_prompt = f'<user> "{prompt}"\n<system> '
+        self.conversation_history.append({ "role": "user", "content": user_prompt })
 
-    msg = completion.choices[0].message.content
-    print(f'msg: {msg}')
-    msg_json = json.loads(msg)
-    return msg_json
+        completion = self.client.chat.completions.create(
+          model="gpt-3.5-turbo",
+          response_format={ "type": "json_object" },
+          messages=[
+            {"role": "system", "content": self.system_prompt },
+            *self.conversation_history,
+          ]
+        )
+
+        msg = completion.choices[0].message.content
+        self.conversation_history.append({ "role": "assistant", "content": msg })
+        self.conversation_history = self.conversation_history[-self.max_history:]
+        msg_json = json.loads(msg)
+        return msg_json
+
+
+def speech_prompt():
+    with sr.Microphone() as source:
+        print("Listening to the microphone")
+        audio = sr_rec.listen(source)
+
+        text = sr_rec.recognize_whisper_api(audio)
+        print(f"whisper: '{text}'")
+
+        return text
 
 
 async def exec_navigate(lua, target):
@@ -78,11 +87,30 @@ async def exec_navigate(lua, target):
 async def exec_explain(lua, exp):
     pass
 
+
+async def openspace_targets(os, lua):
+    nodes = await lua.sceneGraphNodes()
+
+    def node_visible_predicate(n):
+        return f'["{n}"] = openspace.hasProperty("Scene.{n}.Renderable.Enabled") and openspace.propertyValue("Scene.{n}.Renderable.Enabled")'
+
+    script = f'return {{ {','.join(node_visible_predicate(n) for n in nodes.values())} }}'
+
+    nodes_visible = (await os.executeLuaScript(script))['1']
+    return [n for n in nodes_visible if nodes_visible[n]]
+
+
 #--------------------------------MAIN FUNCTION--------------------------------
-async def main(lua):
+async def main(os):
+    lua = await os.singleReturnLibrary()
+    targets = await openspace_targets(os, lua)
+    print(f'found {len(targets)} targets')
+    ai = AI(targets)
+
     while True:
-        query = input()
-        resp = await query_ai(query)
+        prompt = input()
+        # prompt = speech_prompt()
+        resp = ai.query(prompt)
         print(f'json: {resp}')
 
         if 'navigate' in resp:
@@ -105,10 +133,9 @@ async def onConnect():
         return
 
     print("Connected to OpenSpace")
-    lua = await os.singleReturnLibrary()
 
     # Create a main task to run all function logic
-    asyncio.create_task(main(lua), name="Main")
+    asyncio.create_task(main(os), name="Main")
 
 
 def onDisconnect():
