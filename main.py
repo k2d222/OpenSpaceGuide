@@ -44,6 +44,7 @@ class AI:
             <system> {{ "zoom": -1 }}
         '''
 
+
     def query(self, prompt):
         # return { "navigate": "Sun" }
 
@@ -51,7 +52,8 @@ class AI:
         self.conversation_history.append({ "role": "user", "content": user_prompt })
 
         completion = self.client.chat.completions.create(
-          model="gpt-3.5-turbo",
+          # model="gpt-3.5-turbo",
+          model="gpt-4o",
           response_format={ "type": "json_object" },
           messages=[
             {"role": "system", "content": self.system_prompt },
@@ -66,15 +68,15 @@ class AI:
         return msg_json
 
 
-def speech_prompt():
-    with sr.Microphone() as source:
-        print("Listening to the microphone")
-        audio = sr_rec.listen(source)
+    def prompt(self):
+        with sr.Microphone() as source:
+            print("listening to the microphone")
+            audio = sr_rec.listen(source)
+            print("processing audio")
+            text = sr_rec.recognize_whisper_api(audio)
+            print(f"whisper: '{text}'")
 
-        text = sr_rec.recognize_whisper_api(audio)
-        print(f"whisper: '{text}'")
-
-        return text
+            return text
 
 
 async def exec_navigate(lua, target):
@@ -108,8 +110,8 @@ async def main(os):
     ai = AI(targets)
 
     while True:
-        prompt = input()
-        # prompt = speech_prompt()
+        # prompt = input()
+        prompt = ai.prompt()
         resp = ai.query(prompt)
         print(f'json: {resp}')
 
