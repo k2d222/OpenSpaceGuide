@@ -3,17 +3,23 @@ import asyncio
 import openspace
 import json
 import speech_recognition as sr
+import argparse
 
+
+def parse_args():
+    parser = argparse.ArgumentParser(prog='OpenSpaceGuide', description='steer OpenSpace with ChatGPT')
+    parser.add_argument('--address', default='localhost', help='OpenSpace server address')
+    parser.add_argument('--port', type=int, default=4681, help='OpenSpace server port')
+    parser.add_argument('--password', default='', help='OpenSpace server password')
+    parser.add_argument('--input', choices=['whisper', 'text'], help='use keyboard or text-to-speech input')
+    parser.add_argument('--targets', help='comma-separated list of OpenSpace navigation targets that the AI should be aware of (default is all visible targets)')
+    args = parser.parse_args()
+    return args
+
+
+args = parse_args()
 sr_rec = sr.Recognizer()
-
-ai = None
-
-OPENSPACE_ADDRESS = 'localhost'
-OPENSPACE_PORT = 4681
-# Create an OpenSpaceApi instance with the OpenSpace address and port
-os = openspace.Api(OPENSPACE_ADDRESS, OPENSPACE_PORT)
-
-# This event is used to cleanly exit the event loop.
+os = openspace.Api(args.address, args.port)
 disconnect = asyncio.Event()
 
 
@@ -23,7 +29,12 @@ class AI:
         self.targets = targets
         self.conversation_history = []
         self.max_history = 10  # must be even (1 question + 1 answer)
-        self.system_prompt = f'''
+        self.targets = targets
+        self.system_prompt = self._sys_prompt()
+
+
+    def _sys_prompt(self):
+        return f'''
             You are a computer system that drives OpenSpace, an astrophysics visualization software. You are issued prompts by the user and reply JSON objects to execute the prompted task.
             It is important that you follow exactly the text format given in the examples below. the JSON object must always be valid.
 
@@ -32,7 +43,7 @@ class AI:
              - "zoom": move camera closer or further.
              - "explain": give an explanation to the question.
 
-            valid values for "navigate" are: {', '.join(f'"{t}"' for t in targets)}
+            valid values for "navigate" are: {', '.join(f'"{t}"' for t in self.targets)}
  
             Examples Below
 
@@ -105,13 +116,12 @@ async def openspace_targets(os, lua):
 #--------------------------------MAIN FUNCTION--------------------------------
 async def main(os):
     lua = await os.singleReturnLibrary()
-    targets = await openspace_targets(os, lua)
+    targets = args.targets or await openspace_targets(os, lua)
     print(f'found {len(targets)} targets')
     ai = AI(targets)
 
     while True:
-        # prompt = input()
-        prompt = ai.prompt()
+        prompt = ai.prompt() if args.input == 'whisper' else input()
         resp = ai.query(prompt)
         print(f'json: {resp}')
 
@@ -127,9 +137,8 @@ async def main(os):
     disconnect.set()
 
 
-async def onConnect():
-    PASSWORD = ''
-    res = await os.authenticate(PASSWORD)
+async def on_connect():
+    res = await os.authenticate(args.password)
     if not res[1] == 'authorized':
         disconnect.set()
         return
@@ -140,7 +149,7 @@ async def onConnect():
     asyncio.create_task(main(os), name="Main")
 
 
-def onDisconnect():
+def on_disconnect():
     if asyncio.get_event_loop().is_running():
         asyncio.get_event_loop().stop()
     print("Disconnected from OpenSpace")
@@ -148,8 +157,8 @@ def onDisconnect():
     disconnect.set()
 
 
-os.onConnect(onConnect)
-os.onDisconnect(onDisconnect)
+os.onConnect(on_connect)
+os.onDisconnect(on_disconnect)
 
 
 # Main loop serves as an entry point to allow for authentication before running any other
