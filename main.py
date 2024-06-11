@@ -38,45 +38,50 @@ class AI:
 
     def _sys_prompt(self):
         return f'''
-            You are a computer system that drives OpenSpace, an astrophysics visualization software. You are issued prompts by the user and reply JSON objects to execute the prompted task.
-            It is important that you follow exactly the text format given in the examples below. the JSON object must always be valid.
+You are a computer system that drives OpenSpace, an astrophysics visualization software. You are issued prompts by the user and reply JSON objects to execute the prompted task.
+It is important that you follow exactly the text format given in the examples below. the JSON object must always be valid.
 
-            valid JSON keys are:
-             - "navigate": go to a target, e.g. "Earth", "ISS", "Sun", etc.
-             - "zoom": move camera closer or further.
-             - "pan": rotate the camera horizontally (azimuth) around the current target, in degrees.
-             - "tilt": rotate the camera vertically (elevation) around the current target, in degrees.
-             - "explain": give an explanation to the question.
-             - "date": change the simulation date in the format "YYYY-MM-DD".
-             - "speed": set the simulation speed, in seconds per second.
-             - "toggle": enable/disable rendering of a target.
-             - "clarify": the request was not understood, ask for clarification.
+valid JSON keys are:
+ - "navigate": go to a target, e.g. "Earth", "ISS", "Sun", etc.
+ - "zoom": move camera closer or further.
+ - "pan": rotate the camera horizontally (azimuth) around the current target, in degrees.
+ - "tilt": rotate the camera vertically (elevation) around the current target, in degrees.
+ - "explain": give an explanation to the question.
+ - "date": change the simulation date in the format "YYYY-MM-DD".
+ - "speed": set the simulation speed, in seconds per second.
+ - "toggle": enable/disable rendering of a target.
+ - "clarify": the request was not understood, ask for clarification.
+ - "chain": specify a chain of actions to accomplish.
 
-            initial date is "{self.start_date}".
-            initial speed is 1.
-            initial target for "navigate" is "{self.start_location}".
-            valid targets for "navigate" are: {', '.join(f'"{t}"' for t in self.targets)}
- 
-            Examples Below
+initial date is "{self.start_date}".
+initial speed is 1.
+initial target for "navigate" is "{self.start_location}".
+valid targets for "navigate" are: {', '.join(f'"{t}"' for t in self.targets)}
 
-            <user> "Go to the Moon"
-            <system> {{ "navigate": "Moon" }}
-            <user> "What is the diameter of the Moon?"
-            <system> {{ "explain": "The diameter of the Moon is 3474 kilometers." }}
-            <user> "Can you move the camera further?"
-            <system> {{ "zoom": -10.0 }}
-            <user> "Can you go to January 5th, 2013?"
-            <system> {{ "date": "2013-01-05" }}
-            <user> "Can I see the back side of the Moon?"
-            <system> {{ "pan": 180 }}
-            <user> "Can I see the north pole?"
-            <system> {{ "tilt": 90 }}
-            <user> "Hide the Sun"
-            <system> {{ "toggle": "Sun" }}
-            <user> "What is the Blasuzrd"
-            <system> {{ "clarify": "Sorry, I don't know what is a 'Blasuzrd'" }}
-            <user> "Increase the simulation speed"
-            <system> {{ "speed": 10 }}
+Examples Below
+
+<user> "Go to the Moon"
+<system> {{ "navigate": "Moon" }}
+<user> "What is the diameter of the Moon?"
+<system> {{ "explain": "The diameter of the Moon is 3474 kilometers." }}
+<user> "Can you move the camera further?"
+<system> {{ "zoom": -10.0 }}
+<user> "Can you go to January 5th, 2013?"
+<system> {{ "date": "2013-01-05" }}
+<user> "Can I see the back side of the Moon?"
+<system> {{ "pan": 180 }}
+<user> "Can I see the north pole?"
+<system> {{ "tilt": 90 }}
+<user> "Hide the Sun"
+<system> {{ "toggle": "Sun" }}
+<user> "What is the Blasuzrd"
+<system> {{ "clarify": "Sorry, I don't know what is a 'Blasuzrd'" }}
+<user> "Increase the simulation speed"
+<system> {{ "speed": 10 }}
+<user> "Go to the sun, then set the date to February 10, 2020."
+<system> {{ "chain": [ {{ "navigate": "Sun" }}, {{ "date": "2020-02-10" }} ] }}
+<user> "Go to the north pole of the earth"
+<system> {{ "chain": [ {{ "navigate": "Earth" }}, {{ "tilt": "90" }} ] }}
         '''
 
 
@@ -178,6 +183,51 @@ async def openspace_target(lua):
     return await lua.propertyValue('NavigationHandler.OrbitalNavigator.Anchor')
 
 
+async def exec_request(lua, req):
+    if 'navigate' in req:
+        target = req['navigate']
+        print(f"--> navigating to {target}")
+        await exec_navigate(lua, target)
+    elif 'pan' in req:
+        pan = req['pan']
+        print(f"--> panning {pan} degrees")
+        await exec_rotate(lua, pan, 0)
+    elif 'tilt' in req:
+        tilt = req['tilt']
+        print(f"--> tilting {tilt} degrees")
+        await exec_rotate(lua, 0, tilt)
+    elif 'zoom' in req:
+        zoom = req['zoom']
+        print(f"--> zoom {zoom}")
+        await exec_zoom(lua, zoom)
+    elif 'explain' in req:
+        explain = req['explain']
+        print(f"--> explain: {explain}")
+        await exec_explain(lua, explain)
+    elif 'date' in req:
+        date = req['date']
+        print(f"--> set date to {date}")
+        await exec_date(lua, date)
+    elif 'speed' in req:
+        speed = req['speed']
+        print(f"--> set speed to {speed} s/s")
+        await exec_speed(lua, speed)
+    elif 'toggle' in req:
+        toggle = req['toggle']
+        print(f"--> toggling visibility of {toggle}")
+        await exec_toggle(lua, toggle)
+    elif 'clarify' in req:
+        clarify = req['clarify']
+        print(f"--> clarify: {clarify}")
+        await exec_clarify(lua, clarify)
+    elif 'chain' in req:
+        chain = req['chain']
+        for r in chain:
+            await exec_request(lua, r)
+    else:
+        print("--> unexpected ai request")
+
+
 #--------------------------------MAIN FUNCTION--------------------------------
 async def main(os):
     lua = await os.singleReturnLibrary()
@@ -194,42 +244,12 @@ async def main(os):
         resp = ai.query(prompt)
         print(f'json: {resp}')
 
-        if 'navigate' in resp:
-            target = resp['navigate']
-            print(f"--> navigating to {target}")
-            await exec_navigate(lua, target)
-        elif 'pan' in resp:
-            pan = resp['pan']
-            print(f"--> panning {pan} degrees")
-            await exec_rotate(lua, pan, 0)
-        elif 'tilt' in resp:
-            tilt = resp['tilt']
-            print(f"--> tilting {tilt} degrees")
-            await exec_rotate(lua, 0, tilt)
-        elif 'zoom' in resp:
-            zoom = resp['zoom']
-            print(f"--> zoom {zoom}")
-            await exec_zoom(lua, zoom)
-        elif 'explain' in resp:
-            explain = resp['explain']
-            print(f"--> explain: {explain}")
-            await exec_explain(lua, explain)
-        elif 'date' in resp:
-            date = resp['date']
-            print(f"--> set date to {date}")
-            await exec_date(lua, date)
-        elif 'speed' in resp:
-            speed = resp['speed']
-            print(f"--> set speed to {speed} s/s")
-            await exec_speed(lua, speed)
-        elif 'toggle' in resp:
-            toggle = resp['toggle']
-            print(f"--> toggling visibility of {toggle}")
-            await exec_toggle(lua, toggle)
-        elif 'clarify' in resp:
-            clarify = resp['clarify']
-            print(f"--> clarify: {clarify}")
-            await exec_clarify(lua, clarify)
+        if isinstance(resp, list):
+            for req in resp:
+                await exec_request(lua, req)
+        else:
+            await exec_request(lua, resp)
+
 
     disconnect.set()
 
