@@ -16,6 +16,7 @@ def parse_args():
     parser.add_argument('--input', choices=['speech', 'keyboard'], help='use keyboard or text-to-speech input')
     parser.add_argument('--targets', help='comma-separated list of OpenSpace navigation targets that the AI should be aware of (default is all visible targets)')
     parser.add_argument('--trigger', help='trigger keyboard key to start/stop listening')
+    parser.add_argument('--text-widget', action='store_true', help='use a ScreenSpaceText widget in OpenSpace for explanations')
     args = parser.parse_args()
     return args
 
@@ -108,13 +109,10 @@ Examples Below
 <user> "Go to the sun, then set the date to February 10, 2020."
 <system> {{ "chain": [ {{ "navigate": "Sun" }}, {{ "date": "2020-02-10" }} ] }}
 <user> "Go to the north pole of the earth"
-<system> {{ "chain": [ {{ "navigate": "Earth" }}, {{ "tilt": "90" }} ] }}
-        '''
-
+<system> {{ "chain": [ {{ "navigate": "Earth" }}, {{ "tilt": 90 }} ] }}
+'''
 
     def query(self, prompt):
-        # return { "navigate": "Sun" }
-
         user_prompt = f'<user> "{prompt}"\n<system> '
         self.conversation_history.append({ "role": "user", "content": user_prompt })
 
@@ -154,7 +152,11 @@ async def main(os):
     print(f'initial date: {initial_date}')
     print(f'initial target: {initial_target}')
     print(f'found {len(targets)} targets')
+
     ai = AI(initial_target, initial_date, targets)
+
+    if args.text_widget:
+        await openspace_create_text_widget(lua)
 
     while True:
         prompt = speech.listen() if args.input == 'speech' else keyboard_prompt()

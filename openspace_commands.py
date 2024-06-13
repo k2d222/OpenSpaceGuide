@@ -1,3 +1,6 @@
+import textwrap
+
+
 async def exec_navigate(lua, target):
     await lua.pathnavigation.flyTo(target)
     # await lua.setPropertyValue("NavigationHandler.OrbitalNavigator.Aim", "")
@@ -30,8 +33,26 @@ async def exec_toggle(lua, node):
     await lua.setPropertyValueSingle(prop, not state)
 
 
+async def openspace_create_text_widget(lua):
+    if await lua.hasProperty("ScreenSpace.OpenSpaceGuide.Enabled"):
+        print('OpenSpaceGuide ScreenSpaceRenderable already exists')
+        await lua.setPropertyValueSingle("ScreenSpace.OpenSpaceGuide.Enabled", True)
+    else:
+        text_widget = {
+             "Identifier": "OpenSpaceGuide",
+             "Name": "OpenSpaceGuide",
+             "Type": "ScreenSpaceText",
+             "UseRadiusAzimuthElevation": True,
+             "RadiusAzimuthElevation": [1.0, 0.5, 0.1],
+             "Text": "Chat-GPT explanation goes here."
+        }
+        await lua.addScreenSpaceRenderable(text_widget)
+        print('created OpenSpaceGuide ScreenspaceRenderable')
+
+
 async def exec_explain(lua, explain):
-    pass
+    wrapped = '\n'.join(textwrap.wrap(explain, width=70))
+    await lua.setPropertyValueSingle("ScreenSpace.OpenSpaceGuide.Text", wrapped)
 
 
 async def exec_clarify(lua, clarify):
