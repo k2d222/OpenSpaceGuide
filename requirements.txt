@@ -3,3 +3,4 @@ openai==1.30.5
 PyAudio==0.2.14
 SpeechRecognition==3.10.4
 openspace-api==0.1.0
+keyboard==0.13.5
