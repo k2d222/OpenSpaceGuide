@@ -1,33 +1,40 @@
 import textwrap
 
+async def _show_text(lua, text):
+    if await lua.hasProperty("ScreenSpace.OpenSpaceGuide.Text"):
+        await lua.setPropertyValueSingle("ScreenSpace.OpenSpaceGuide.Text", text)
+
 
 async def exec_navigate(lua, target):
+    await _show_text(lua, f'Navigating to {target}')
     await lua.pathnavigation.flyTo(target)
-    # await lua.setPropertyValue("NavigationHandler.OrbitalNavigator.Aim", "")
-    # await lua.setPropertyValue("NavigationHandler.OrbitalNavigator.Anchor", target)
-    # await lua.setPropertyValue("NavigationHandler.OrbitalNavigator.RetargetAnchor", None)
 
 
 async def exec_rotate(lua, pan, tilt):
     # XXX: openspace's rotation seems broken (doubled degrees)
+    await _show_text(lua, f'Rotating by ({pan}°,{tilt}°)')
     await lua.navigation.addGlobalRotation(pan / 2.0, tilt / 2.0)
 
 
 async def exec_zoom(lua, z_truck):
     # distance = await lua.navigation.distanceToFocus()
+    await _show_text(lua, f'{"de" if z_truck < 0 else ""}zooming')
     await lua.navigation.addTruckMovement(0, z_truck)
 
 
 async def exec_date(lua, date):
+    await _show_text(lua, f'Setting the date to {date}')
     time = f"{date}T00:00:00"
     await lua.time.setTime(time)
 
 
 async def exec_speed(lua, speed):
+    await _show_text(lua, f'Setting the speed to {speed} seconds per second')
     await lua.time.setDeltaTime(speed)
 
 
 async def exec_toggle(lua, node):
+    await _show_text(lua, f'Toggling {node}')
     prop = f"Scene.{node}.Renderable.Enabled"
     state = await lua.propertyValue(prop)
     await lua.setPropertyValueSingle(prop, not state)
@@ -52,14 +59,16 @@ async def openspace_create_text_widget(lua):
 
 async def exec_explain(lua, explain):
     wrapped = '\n'.join(textwrap.wrap(explain, width=70))
-    await lua.setPropertyValueSingle("ScreenSpace.OpenSpaceGuide.Text", wrapped)
+    await _show_text(lua, wrapped)
 
 
 async def exec_clarify(lua, clarify):
-    pass
+    wrapped = '\n'.join(textwrap.wrap(clarify, width=70))
+    await _show_text(lua, wrapped)
 
 
 async def exec_pause(lua):
+    await _show_text(lua, 'Toggling the simulation')
     lua.time.togglePause()
 
 
