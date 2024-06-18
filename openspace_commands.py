@@ -5,6 +5,11 @@ async def _show_text(lua, text):
         await lua.setPropertyValueSingle("ScreenSpace.OpenSpaceGuide.Text", text)
 
 
+async def show_user_prompt(lua, text):
+    if await lua.hasProperty("ScreenSpace.OpenSpaceGuide_user.Text"):
+        await lua.setPropertyValueSingle("ScreenSpace.OpenSpaceGuide_user.Text", text)
+
+
 async def exec_navigate(lua, target):
     await _show_text(lua, f'Navigating to {target}')
     await lua.pathnavigation.flyTo(target)
@@ -45,15 +50,24 @@ async def openspace_create_text_widget(lua):
         print('OpenSpaceGuide ScreenSpaceRenderable already exists')
         await lua.setPropertyValueSingle("ScreenSpace.OpenSpaceGuide.Enabled", True)
     else:
-        text_widget = {
+        w1 = {
              "Identifier": "OpenSpaceGuide",
-             "Name": "OpenSpaceGuide",
+             "Name": "OpenSpaceGuide AI",
              "Type": "ScreenSpaceText",
              "UseRadiusAzimuthElevation": True,
-             "RadiusAzimuthElevation": [1.0, 0.5, 0.1],
+             "RadiusAzimuthElevation": [1.0, -0.45, 0.1],
              "Text": "Chat-GPT explanation goes here."
         }
-        await lua.addScreenSpaceRenderable(text_widget)
+        w2 = {
+             "Identifier": "OpenSpaceGuide_user",
+             "Name": "OpenSpaceGuide User",
+             "Type": "ScreenSpaceText",
+             "UseRadiusAzimuthElevation": True,
+             "RadiusAzimuthElevation": [1.0, 0.45, 0.1],
+             "Text": "User prompt goes here."
+        }
+        await lua.addScreenSpaceRenderable(w1)
+        await lua.addScreenSpaceRenderable(w2)
         print('created OpenSpaceGuide ScreenspaceRenderable')
 
 

@@ -160,6 +160,7 @@ async def main(os):
 
     while True:
         prompt = speech.listen() if args.input == 'speech' else keyboard_prompt()
+        await show_user_prompt(lua, prompt)
         resp = ai.query(prompt)
         print(f'json: {resp}')
 
