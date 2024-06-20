@@ -5,6 +5,7 @@ import json
 import speech_recognition as sr
 import argparse
 import keyboard
+import collections
 from openspace_commands import *
 
 
@@ -17,6 +18,7 @@ def parse_args():
     parser.add_argument('--targets', help='comma-separated list of OpenSpace navigation targets that the AI should be aware of (default is all visible targets)')
     parser.add_argument('--trigger', help='trigger keyboard key to start/stop listening')
     parser.add_argument('--text-widget', action='store_true', help='use a ScreenSpaceText widget in OpenSpace for explanations')
+    parser.add_argument('--microphone', type=int, help='microphone index to use (see printed available microphones)')
     args = parser.parse_args()
     return args
 
@@ -27,9 +29,13 @@ print('args:', args)
 
 class SpeechToText:
     def __init__(self):
+        mics = sr.Microphone.list_microphone_names()
+        print(f'available microphone(s):\n - {'\n - '.join(mics)}')
+
         self.sr_rec = sr.Recognizer()
-        self.sr_mic = sr.Microphone()
-        print("calibrating microphone")
+        self.sr_mic = sr.Microphone(args.microphone)
+
+        print('calibrating microphone')
         self.calibrate()
 
 
@@ -38,18 +44,43 @@ class SpeechToText:
             self.sr_rec.adjust_for_ambient_noise(source)
 
 
-    def listen(self):
-        if args.trigger is not None:
-            print(f"waiting for trigger ({args.trigger})")
+    def _audio_triggered(self, timeout):
+        with self.sr_mic as source:
+            print(f'waiting for trigger ({args.trigger})')
             keyboard.wait(args.trigger)
 
+            seconds_per_buffer = float(source.CHUNK) / source.SAMPLE_RATE
+            elapsed_time = 0
+
+            frames = collections.deque()
+
+            print('listening to the microphone')
+            while elapsed_time < timeout and keyboard.is_pressed(args.trigger):
+                buffer = source.stream.read(source.CHUNK)
+                if len(buffer) == 0:
+                    break
+                frames.append(buffer)
+                elapsed_time += seconds_per_buffer
+
+            frame_data = b''.join(frames)
+
+            return sr.AudioData(frame_data, source.SAMPLE_RATE, source.SAMPLE_WIDTH)
+            # return self.sr_rec.record(source, 2)
+
+
+    def _audio_untriggered(self, timeout):
         with self.sr_mic as source:
             print("listening to the microphone")
-            audio = self.sr_rec.listen(source)
-            print("processing audio")
-            text = self.sr_rec.recognize_whisper_api(audio)
-            print(f"whisper: '{text}'")
-            return text
+            return self.sr_rec.listen(source, timeout)
+
+
+    def listen(self, timeout=10):
+        audio = self._audio_triggered(timeout) if args.trigger is not None else self._audio_untriggered(timeout)
+        print("processing audio")
+        text = self.sr_rec.recognize_whisper_api(audio)
+        print(f"whisper: '{text}'")
+        return text
+
 
 
 class AI:
