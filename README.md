@@ -1,6 +1,7 @@
 # OpenSpaceGuide: steering OpenSpace with natural language
 
-![Teaser Image](feature.jpg)
+![OpenSpaceGuide pictures in action](feature.jpg)
+*Pictures taken in the [Visualiseringscenter C](https://visualiseringscenter.se/wisdome-0) dome theater.*
 
 ---
 
