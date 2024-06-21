@@ -1,5 +1,9 @@
 # OpenSpaceGuide: steering OpenSpace with natural language
 
+![Teaser Image](feature.jpg)
+
+---
+
 This repo contains a script for piloting an [OpenSpace](https://github.com/OpenSpace/OpenSpace/) instance with OpenAI's GPT4 and Whisper.
 More details about this project on OSF — [https://osf.io/jcgzt/](https://osf.io/jcgzt/)
 
