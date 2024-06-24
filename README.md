@@ -9,7 +9,7 @@ This repo contains a script for piloting an [OpenSpace](https://github.com/OpenS
 More details about this project on OSF — [https://osf.io/jcgzt/](https://osf.io/jcgzt/)
 
 ## Instructions
-
+ * Setup your `OPENAI_API_KEY` environment variable. You need a paid access to OpenAI's API, see [https://platform.openai.com/api-keys](https://platform.openai.com/api-keys).
  * Install the Python dependencies — `pip install -R requirements.txt` (it's recommended to setup a virtual environment first, see [this](https://virtualenv.pypa.io/en/latest/user_guide.html)).
  * Install OpenSpace — [this fork](https://github.com/k2d222/OpenSpace) contains a patch to display the text prompts on screen with `--text-widget`. Otherwise, install from [the main repo](https://github.com/OpenSpace/OpenSpace/).
  * Launch OpenSpace, then start the script (`python main.py --input keyboard`).
