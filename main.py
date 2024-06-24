@@ -19,6 +19,7 @@ def parse_args():
     parser.add_argument('--trigger', help='trigger keyboard key to start/stop listening')
     parser.add_argument('--text-widget', action='store_true', help='use a ScreenSpaceText widget in OpenSpace for explanations')
     parser.add_argument('--microphone', type=int, help='microphone index to use (see printed available microphones)')
+    parser.add_argument('--assistant', type=str, help='OpenAI assistant ID')
     args = parser.parse_args()
     return args
 
@@ -90,9 +91,8 @@ class AI:
         self.targets = targets
 
         self.client = OpenAI()
-        self.conversation_history = []
-        self.max_history = 10  # must be even (1 question + 1 answer)
-        self.targets = targets
+        self.assistant = self.client.beta.assistants.retrieve(args.assistant)
+        self.thread = self.client.beta.threads.create()
         self.system_prompt = self._sys_prompt()
 
     def _sys_prompt(self):
@@ -143,25 +143,48 @@ Examples Below
 <system> {{ "chain": [ {{ "navigate": "Earth" }}, {{ "tilt": 90 }} ] }}
 '''
 
-    def query(self, prompt):
-        user_prompt = f'<user> "{prompt}"\n<system> '
-        self.conversation_history.append({ "role": "user", "content": user_prompt })
-
-        completion = self.client.chat.completions.create(
-          # model="gpt-3.5-turbo",
-          model="gpt-4o",
-          response_format={ "type": "json_object" },
-          messages=[
-            {"role": "system", "content": self.system_prompt },
-            *self.conversation_history,
-          ]
+    async def query(self, prompt, os):
+        self.client.beta.threads.messages.create(
+            thread_id=self.thread.id,
+            role='user',
+            content=prompt
         )
 
-        msg = completion.choices[0].message.content
-        self.conversation_history.append({ "role": "assistant", "content": msg })
-        self.conversation_history = self.conversation_history[-self.max_history:]
-        msg_json = json.loads(msg)
-        return msg_json
+        run = self.client.beta.threads.runs.create_and_poll(
+            thread_id=self.thread.id,
+            assistant_id=self.assistant.id,
+        )
+
+        print('run: ')
+        print(run)
+
+        if run.status == 'requires_action' and run.required_action.type == 'submit_tool_outputs':
+            calls = run.required_action.submit_tool_outputs.tool_calls
+            print('calls:')
+            print(calls)
+            outputs = []
+
+            for call in calls:
+                fn = call.function.name.replace('_', '.')
+                args = json.loads(call.function.arguments)
+                lua_script = f'{fn}'
+                print(f'script: {lua_script} args: {args}')
+                res = await os.executeLuaFunction(fn, args.keys(), True)
+                print(f'res: {res}')
+                outputs.append({ 'tool_call_id': call.id, 'output': res })
+
+            run = self.client.beta.threads.runs.submit_tool_outputs(
+              thread_id=self.thread.id,
+              run_id=run.id,
+              tool_outputs=outputs
+            )
+
+            print('run2:')
+            print(run)
+
+        print('steps: ')
+        print(steps)
+        # return steps.data
 
 
 def keyboard_prompt():
@@ -192,7 +215,7 @@ async def main(os):
     while True:
         prompt = speech.listen() if args.input == 'speech' else keyboard_prompt()
         await show_user_prompt(lua, prompt)
-        resp = ai.query(prompt)
+        resp = await ai.query(prompt, os)
         print(f'json: {resp}')
 
         if isinstance(resp, list):
