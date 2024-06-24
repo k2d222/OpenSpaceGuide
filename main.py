@@ -1,4 +1,4 @@
-from openai import OpenAI
+from openai import OpenAI as OpenAI_
 import asyncio
 import openspace
 import json
@@ -6,6 +6,7 @@ import speech_recognition as sr
 import argparse
 import keyboard
 import collections
+from persistence import Persistent
 from openspace_commands import *
 
 
@@ -20,12 +21,17 @@ def parse_args():
     parser.add_argument('--text-widget', action='store_true', help='use a ScreenSpaceText widget in OpenSpace for explanations')
     parser.add_argument('--microphone', type=int, help='microphone index to use (see printed available microphones)')
     parser.add_argument('--assistant', type=str, help='OpenAI assistant ID')
+    parser.add_argument('--persistent', action='store_true', help='cache identical OpenAI API calls')
     args = parser.parse_args()
     return args
 
 
 args = parse_args()
 print('args:', args)
+
+
+# caching openai calls to save network time and money
+OpenAI = Persistent(OpenAI_) if args.persistent else OpenAI_
 
 
 class SpeechToText:
