@@ -1,4 +1,4 @@
-from openai import OpenAI as OpenAI_
+from openai import AsyncOpenAI as AsyncOpenAI_, AsyncAssistantEventHandler
 import asyncio
 import openspace
 import json
@@ -7,7 +7,8 @@ import argparse
 import keyboard
 import collections
 from persistence import Persistent
-from openspace_commands import *
+import openspace_commands as oscmd
+import functools
 
 
 def parse_args():
@@ -29,9 +30,10 @@ def parse_args():
 args = parse_args()
 print('args:', args)
 
+loop = asyncio.new_event_loop()
 
 # caching openai calls to save network time and money
-OpenAI = Persistent(OpenAI_) if args.persistent else OpenAI_
+AsyncOpenAI = Persistent(AsyncOpenAI_) if args.persistent else AsyncOpenAI_
 
 
 class SpeechToText:
@@ -89,6 +91,53 @@ class SpeechToText:
         return text
 
 
+class AIEventHandler(AsyncAssistantEventHandler):
+    def __init__(self, sup, os):
+        super().__init__()
+        self.sup = sup
+        self.os = os
+
+
+    async def on_event(self, evt):
+        if evt.event == 'thread.run.requires_action':
+            await self.handle_requires_action(evt.data)
+
+
+    async def on_text_created(self, text) -> None:
+        print("assistant> ", end="", flush=True)
+
+
+    async def on_text_delta(self, delta, snapshot):
+        print(delta.value, end="", flush=True)
+
+
+    async def on_text_done(self, text):
+        print('')
+
+
+    async def handle_requires_action(self, data):
+        outputs = []
+
+        for tool_call in data.required_action.submit_tool_outputs.tool_calls:
+            fn = tool_call.function.name.replace('_', '.')
+            args = json.loads(tool_call.function.arguments) if tool_call.function.arguments else {}
+            print(f'assistant> [calling {tool_call.function.name} with args {args}]')
+            res = await os.executeLuaFunction(fn, list(args.values()), True)
+            res = json.dumps(res)
+            print(f' -> call res: {res}')
+            outputs.append({
+                'tool_call_id': tool_call.id,
+                'output': res
+            })
+
+        async with self.sup.client.beta.threads.runs.submit_tool_outputs_stream(
+            thread_id=self.sup.thread.id,
+            run_id=self.current_run.id,
+            tool_outputs=outputs,
+            event_handler=AIEventHandler(self.sup, self.os),
+        ) as stream:
+            await stream.until_done()
+
 
 class AI:
     def __init__(self, location, date, targets):
@@ -96,106 +145,31 @@ class AI:
         self.start_date = date
         self.targets = targets
 
-        self.client = OpenAI()
-        self.assistant = self.client.beta.assistants.retrieve(args.assistant)
-        self.thread = self.client.beta.threads.create()
-        self.system_prompt = self._sys_prompt()
+    async def init(self):
+        self.client = AsyncOpenAI()
+        self.assistant = await self.client.beta.assistants.retrieve(args.assistant)
+        self.thread = await self.client.beta.threads.create()
 
-    def _sys_prompt(self):
-        return f'''
-You are a computer system that drives OpenSpace, an astrophysics visualization software. You are issued prompts by the user and reply JSON objects to execute the prompted task.
-It is important that you follow exactly the text format given in the examples below. the JSON object must always be valid.
 
-valid JSON keys are:
- - "navigate": go to a target, e.g. "Earth", "ISS", "Sun", etc.
- - "zoom": move camera closer or further.
- - "pan": rotate the camera horizontally (azimuth) around the current target, in degrees.
- - "tilt": rotate the camera vertically (elevation) around the current target, in degrees.
- - "explain": give an explanation to the question.
- - "date": change the simulation date in the format "YYYY-MM-DD".
- - "speed": set the simulation speed, in seconds per second.
- - "toggle": enable/disable rendering of a target.
- - "clarify": the request was not understood, ask for clarification.
- - "chain": specify a chain of actions to accomplish.
-
-initial date is "{self.start_date}".
-initial speed is 1.
-initial target for "navigate" is "{self.start_location}".
-valid targets for "navigate" are: {', '.join(f'"{t}"' for t in self.targets)}
-
-Examples Below
-
-<user> "Go to the Moon"
-<system> {{ "navigate": "Moon" }}
-<user> "What is the diameter of the Moon?"
-<system> {{ "explain": "The diameter of the Moon is 3474 kilometers." }}
-<user> "Can you move the camera further?"
-<system> {{ "zoom": -10.0 }}
-<user> "Can you go to January 5th, 2013?"
-<system> {{ "date": "2013-01-05" }}
-<user> "Can I see the back side of the Moon?"
-<system> {{ "pan": 180 }}
-<user> "Can I see the north pole?"
-<system> {{ "tilt": 90 }}
-<user> "Hide the Sun"
-<system> {{ "toggle": "Sun" }}
-<user> "What is the Blasuzrd"
-<system> {{ "clarify": "Sorry, I don't know what is a 'Blasuzrd'" }}
-<user> "Increase the simulation speed"
-<system> {{ "speed": 10 }}
-<user> "Go to the sun, then set the date to February 10, 2020."
-<system> {{ "chain": [ {{ "navigate": "Sun" }}, {{ "date": "2020-02-10" }} ] }}
-<user> "Go to the north pole of the earth"
-<system> {{ "chain": [ {{ "navigate": "Earth" }}, {{ "tilt": 90 }} ] }}
-'''
-
-    async def query(self, prompt, os):
-        self.client.beta.threads.messages.create(
+    async def run_query(self, prompt, os):
+        await self.client.beta.threads.messages.create(
             thread_id=self.thread.id,
             role='user',
             content=prompt
         )
 
-        run = self.client.beta.threads.runs.create_and_poll(
+        async with self.client.beta.threads.runs.stream(
             thread_id=self.thread.id,
             assistant_id=self.assistant.id,
-        )
-
-        print('run: ')
-        print(run)
-
-        if run.status == 'requires_action' and run.required_action.type == 'submit_tool_outputs':
-            calls = run.required_action.submit_tool_outputs.tool_calls
-            print('calls:')
-            print(calls)
-            outputs = []
-
-            for call in calls:
-                fn = call.function.name.replace('_', '.')
-                args = json.loads(call.function.arguments)
-                lua_script = f'{fn}'
-                print(f'script: {lua_script} args: {args}')
-                res = await os.executeLuaFunction(fn, args.keys(), True)
-                print(f'res: {res}')
-                outputs.append({ 'tool_call_id': call.id, 'output': res })
-
-            run = self.client.beta.threads.runs.submit_tool_outputs(
-              thread_id=self.thread.id,
-              run_id=run.id,
-              tool_outputs=outputs
-            )
-
-            print('run2:')
-            print(run)
-
-        print('steps: ')
-        print(steps)
-        # return steps.data
+            event_handler=AIEventHandler(self, os),
+        ) as stream:
+            await stream.until_done()
+            print('stream done')
 
 
-def keyboard_prompt():
+async def keyboard_prompt():
     print('prompt> ', end='')
-    return input()
+    return await loop.run_in_executor(None, input)
 
 
 #--------------------------------MAIN FUNCTION--------------------------------
@@ -206,30 +180,23 @@ speech = SpeechToText() if args.input == 'speech' else None
 
 async def main(os):
     lua = await os.singleReturnLibrary()
-    targets = args.targets or await openspace_visible_targets(os, lua)
-    initial_date = await openspace_date(lua)
-    initial_target = await openspace_target(lua)
+    targets = args.targets or await oscmd.visible_targets(os, lua)
+    initial_date = await oscmd.date(lua)
+    initial_target = await oscmd.target(lua)
     print(f'initial date: {initial_date}')
     print(f'initial target: {initial_target}')
     print(f'found {len(targets)} targets')
 
     ai = AI(initial_target, initial_date, targets)
+    await ai.init()
 
     if args.text_widget:
-        await openspace_create_text_widget(lua)
+        await oscmd.create_text_widget(lua)
 
     while True:
-        prompt = speech.listen() if args.input == 'speech' else keyboard_prompt()
-        await show_user_prompt(lua, prompt)
-        resp = await ai.query(prompt, os)
-        print(f'json: {resp}')
-
-        if isinstance(resp, list):
-            for req in resp:
-                await exec_request(lua, req)
-        else:
-            await exec_request(lua, resp)
-
+        prompt = speech.listen() if args.input == 'speech' else await keyboard_prompt()
+        await oscmd.show_user_prompt(lua, prompt)
+        await ai.run_query(prompt, os)
 
     disconnect.set()
 
@@ -267,6 +234,5 @@ async def mainLoop():
     await disconnect.wait()
     os.disconnect()
 
-loop = asyncio.new_event_loop()
 loop.run_until_complete(mainLoop())
-loop.run_forever()
+print('done')

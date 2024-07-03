@@ -45,7 +45,7 @@ async def exec_toggle(lua, node):
     await lua.setPropertyValueSingle(prop, not state)
 
 
-async def openspace_create_text_widget(lua):
+async def create_text_widget(lua):
     if await lua.hasProperty("ScreenSpace.OpenSpaceGuide.Enabled"):
         print('OpenSpaceGuide ScreenSpaceRenderable already exists')
         await lua.setPropertyValueSingle("ScreenSpace.OpenSpaceGuide.Enabled", True)
@@ -86,7 +86,7 @@ async def exec_pause(lua):
     lua.time.togglePause()
 
 
-async def openspace_visible_targets(os, lua):
+async def visible_targets(os, lua):
     nodes = await lua.sceneGraphNodes()
 
     def node_visible_predicate(n):
@@ -98,11 +98,11 @@ async def openspace_visible_targets(os, lua):
     return [n for n in nodes_visible if nodes_visible[n]]
 
 
-async def openspace_date(lua):
+async def date(lua):
     return (await lua.time.UTC())[:10]
 
 
-async def openspace_target(lua):
+async def target(lua):
     return await lua.propertyValue('NavigationHandler.OrbitalNavigator.Anchor')
 
 

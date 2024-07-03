@@ -34,8 +34,13 @@ class PersistentInstance:
 
 
     def _cache_result(self, func_name, args, kwargs, result):
-        with open(self._cache_path(func_name, args, kwargs), 'wb') as f:
-            pickle.dump(result, f)
+        path = self._cache_path(func_name, args, kwargs)
+        try:
+            with open(path, 'wb') as f:
+                pickle.dump(result, f)
+        except pickle.PickleError:
+            print(f'cannot cache {func_name}')
+            os.remove(path)
 
 
     def _load_cached_result(self, func_name, args, kwargs):
