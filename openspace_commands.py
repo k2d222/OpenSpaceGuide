@@ -1,45 +1,56 @@
 import textwrap
 
-async def _show_text(lua, text):
+def asciify(text):
+    return text.replace('°', 'deg')
+
+def _wrap(text):
+    text = asciify(text)
+    lines = text.splitlines()
+    wrapped = '\n'.join([textwrap.fill(line, width=70) for line in lines])
+    return wrapped.ljust(70, ' ')
+
+
+async def show_text(lua, text):
+    wrapped = _wrap(text)
     if await lua.hasProperty("ScreenSpace.OpenSpaceGuide.Text"):
-        await lua.setPropertyValueSingle("ScreenSpace.OpenSpaceGuide.Text", text)
+        await lua.setPropertyValueSingle("ScreenSpace.OpenSpaceGuide.Text", wrapped)
 
 
 async def show_user_prompt(lua, text):
+    wrapped = _wrap(text)
     if await lua.hasProperty("ScreenSpace.OpenSpaceGuide_user.Text"):
-        await lua.setPropertyValueSingle("ScreenSpace.OpenSpaceGuide_user.Text", text)
-
+        await lua.setPropertyValueSingle("ScreenSpace.OpenSpaceGuide_user.Text", wrapped)
 
 async def exec_navigate(lua, target):
-    await _show_text(lua, f'Navigating to {target}')
+    await show_text(lua, f'Navigating to {target}')
     await lua.pathnavigation.flyTo(target)
 
 
 async def exec_rotate(lua, pan, tilt):
     # XXX: openspace's rotation seems broken (doubled degrees)
-    await _show_text(lua, f'Rotating by ({pan}°,{tilt}°)')
+    await show_text(lua, f'Rotating by ({pan}deg,{tilt}deg)')
     await lua.navigation.addGlobalRotation(pan / 2.0, tilt / 2.0)
 
 
 async def exec_zoom(lua, z_truck):
     # distance = await lua.navigation.distanceToFocus()
-    await _show_text(lua, f'{"de" if z_truck < 0 else ""}zooming')
+    await show_text(lua, f'{"de" if z_truck < 0 else ""}zooming')
     await lua.navigation.addTruckMovement(0, z_truck)
 
 
 async def exec_date(lua, date):
-    await _show_text(lua, f'Setting the date to {date}')
+    await show_text(lua, f'Setting the date to {date}')
     time = f"{date}T00:00:00"
     await lua.time.setTime(time)
 
 
 async def exec_speed(lua, speed):
-    await _show_text(lua, f'Setting the speed to {speed} seconds per second')
+    await show_text(lua, f'Setting the speed to {speed} seconds per second')
     await lua.time.setDeltaTime(speed)
 
 
 async def exec_toggle(lua, node):
-    await _show_text(lua, f'Toggling {node}')
+    await show_text(lua, f'Toggling {node}')
     prop = f"Scene.{node}.Renderable.Enabled"
     state = await lua.propertyValue(prop)
     await lua.setPropertyValueSingle(prop, not state)
@@ -72,17 +83,16 @@ async def create_text_widget(lua):
 
 
 async def exec_explain(lua, explain):
-    wrapped = '\n'.join(textwrap.wrap(explain, width=70))
-    await _show_text(lua, wrapped)
+    await show_text(explain)
 
 
 async def exec_clarify(lua, clarify):
     wrapped = '\n'.join(textwrap.wrap(clarify, width=70))
-    await _show_text(lua, wrapped)
+    await show_text(lua, wrapped)
 
 
 async def exec_pause(lua):
-    await _show_text(lua, 'Toggling the simulation')
+    await show_text(lua, 'Toggling the simulation')
     lua.time.togglePause()
 
 

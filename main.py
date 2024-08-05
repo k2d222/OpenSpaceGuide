@@ -92,11 +92,12 @@ class SpeechToText:
 
 
 class AIEventHandler(AsyncAssistantEventHandler):
-    def __init__(self, sup, os):
+    def __init__(self, ai, os, lua):
         super().__init__()
-        self.sup = sup
+        self.ai = ai
         self.os = os
-
+        self.lua = lua
+        self.text = ''
 
     async def on_event(self, evt):
         if evt.event == 'thread.run.requires_action':
@@ -109,17 +110,19 @@ class AIEventHandler(AsyncAssistantEventHandler):
 
     async def on_text_delta(self, delta, snapshot):
         print(delta.value, end="", flush=True)
+        await oscmd.show_text(self.lua, snapshot.value)
 
 
     async def on_text_done(self, text):
         print('')
+        await oscmd.show_text(self.lua, text.value)
 
 
     async def handle_requires_action(self, data):
         outputs = []
 
         for tool_call in data.required_action.submit_tool_outputs.tool_calls:
-            fn = tool_call.function.name.replace('_', '.')
+            fn = 'openspace.' + tool_call.function.name.replace('_', '.')
             args = json.loads(tool_call.function.arguments) if tool_call.function.arguments else {}
             print(f'assistant> [calling {tool_call.function.name} with args {args}]')
             res = await os.executeLuaFunction(fn, list(args.values()), True)
@@ -130,11 +133,11 @@ class AIEventHandler(AsyncAssistantEventHandler):
                 'output': res
             })
 
-        async with self.sup.client.beta.threads.runs.submit_tool_outputs_stream(
-            thread_id=self.sup.thread.id,
+        async with self.ai.client.beta.threads.runs.submit_tool_outputs_stream(
+            thread_id=self.ai.thread.id,
             run_id=self.current_run.id,
             tool_outputs=outputs,
-            event_handler=AIEventHandler(self.sup, self.os),
+            event_handler=AIEventHandler(self.ai, self.os, self.lua),
         ) as stream:
             await stream.until_done()
 
@@ -150,8 +153,7 @@ class AI:
         self.assistant = await self.client.beta.assistants.retrieve(args.assistant)
         self.thread = await self.client.beta.threads.create()
 
-
-    async def run_query(self, prompt, os):
+    async def run_query(self, prompt, os, lua):
         await self.client.beta.threads.messages.create(
             thread_id=self.thread.id,
             role='user',
@@ -161,7 +163,7 @@ class AI:
         async with self.client.beta.threads.runs.stream(
             thread_id=self.thread.id,
             assistant_id=self.assistant.id,
-            event_handler=AIEventHandler(self, os),
+            event_handler=AIEventHandler(self, os, lua),
         ) as stream:
             await stream.until_done()
             print('stream done')
@@ -196,7 +198,7 @@ async def main(os):
     while True:
         prompt = speech.listen() if args.input == 'speech' else await keyboard_prompt()
         await oscmd.show_user_prompt(lua, prompt)
-        await ai.run_query(prompt, os)
+        await ai.run_query(prompt, os, lua)
 
     disconnect.set()
 

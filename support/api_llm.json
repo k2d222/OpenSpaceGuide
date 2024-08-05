@@ -431,8 +431,14 @@
             "description": "Returns the value the property, identified by the provided URI. Deprecated in favor of the 'propertyValue' function",
             "parameters": {
                 "type": "object",
-                "properties": {},
-                "required": []
+                "properties": {
+                    "uri": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "uri"
+                ]
             }
         }
     },
@@ -800,11 +806,17 @@
         "type": "function",
         "function": {
             "name": "openspace.propertyValue",
-            "description": "Returns the value the property, identified by the provided URI. Deprecated in favor of the 'propertyValue' function",
+            "description": "Returns the value the property, identified by the provided URI. ",
             "parameters": {
                 "type": "object",
-                "properties": {},
-                "required": []
+                "properties": {
+                    "uri": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "uri"
+                ]
             }
         }
     },
@@ -1140,8 +1152,27 @@
             "description": "Sets all property(s) identified by the URI (with potential wildcards) in the first argument. The second argument can be any type, but it has to match the type that the property (or properties) expect. If the third is not present or is '0', the value changes instantly, otherwise the change will take that many seconds and the value is interpolated at each step in between. The fourth parameter is an optional easing function if a 'duration' has been specified. If 'duration' is 0, this parameter value is ignored. Otherwise, it can be one of many supported easing functions. See easing.h for available functions. The fifth argument is another Lua script that will be executed when the interpolation provided in parameter 3 finishes.\nThe URI is interpreted using a wildcard in which '*' is expanded to '(.*)' and bracketed components '{ }' are interpreted as group tag names. Then, the passed value will be set on all properties that fit the regex + group name combination.",
             "parameters": {
                 "type": "object",
-                "properties": {},
-                "required": []
+                "properties": {
+                    "uri": {
+                        "type": "string"
+                    },
+                    "value": {},
+                    "duration": {
+                        "type": "number"
+                    },
+                    "easing": {
+                        "type": "string"
+                    },
+                    "postscript": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "uri",
+                    "value",
+                    "easing",
+                    "postscript"
+                ]
             }
         }
     },
@@ -1152,8 +1183,27 @@
             "description": "Sets the property identified by the URI in the first argument. The second argument can be any type, but it has to match the type that the property expects. If the third is not present or is '0', the value changes instantly, otherwise the change will take that many seconds and the value is interpolated at each step in between. The fourth parameter is an optional easing function if a 'duration' has been specified. If 'duration' is 0, this parameter value is ignored. Otherwise, it has to be one of the easing functions defined in the list below. This is the same as calling the setValue method and passing 'single' as the fourth argument to setPropertyValue. The fifth argument is another Lua script that will be executed when the interpolation provided in parameter 3 finishes.\n Avaiable easing functions: Linear, QuadraticEaseIn, QuadraticEaseOut, QuadraticEaseInOut, CubicEaseIn, CubicEaseOut, CubicEaseInOut, QuarticEaseIn, QuarticEaseOut, QuarticEaseInOut, QuinticEaseIn, QuinticEaseOut, QuinticEaseInOut, SineEaseIn, SineEaseOut, SineEaseInOut, CircularEaseIn, CircularEaseOut, CircularEaseInOut, ExponentialEaseIn, ExponentialEaseOut, ExponentialEaseInOut, ElasticEaseIn, ElasticEaseOut, ElasticEaseInOut, BounceEaseIn, BounceEaseOut, BounceEaseInOut",
             "parameters": {
                 "type": "object",
-                "properties": {},
-                "required": []
+                "properties": {
+                    "uri": {
+                        "type": "string"
+                    },
+                    "value": {},
+                    "duration": {
+                        "type": "number"
+                    },
+                    "easing": {
+                        "type": "string"
+                    },
+                    "postscript": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "uri",
+                    "value",
+                    "easing",
+                    "postscript"
+                ]
             }
         }
     },
@@ -3165,158 +3215,6 @@
                 "required": [
                     "nodeIdentifer",
                     "useAltitude"
-                ]
-            }
-        }
-    },
-    {
-        "type": "function",
-        "function": {
-            "name": "openspace.iswa.addCdfFiles",
-            "description": "Adds a cdf files to choose from.",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "path": {
-                        "type": "string"
-                    }
-                },
-                "required": [
-                    "path"
-                ]
-            }
-        }
-    },
-    {
-        "type": "function",
-        "function": {
-            "name": "openspace.iswa.addCygnet",
-            "description": "Adds a IswaCygnet.",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "id": {
-                        "type": "number"
-                    },
-                    "type": {
-                        "type": "string"
-                    },
-                    "group": {
-                        "type": "string"
-                    }
-                },
-                "required": []
-            }
-        }
-    },
-    {
-        "type": "function",
-        "function": {
-            "name": "openspace.iswa.addKameleonPlanes",
-            "description": "Adds KameleonPlanes from cdf file.",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "group": {
-                        "type": "string"
-                    },
-                    "pos": {
-                        "type": "number"
-                    }
-                },
-                "required": [
-                    "group",
-                    "pos"
-                ]
-            }
-        }
-    },
-    {
-        "type": "function",
-        "function": {
-            "name": "openspace.iswa.addScreenSpaceCygnet",
-            "description": "Adds a Screen Space Cygnets.",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "d": {
-                        "type": "object"
-                    }
-                },
-                "required": [
-                    "d"
-                ]
-            }
-        }
-    },
-    {
-        "type": "function",
-        "function": {
-            "name": "openspace.iswa.removeCygnet",
-            "description": "Remove a Cygnets.",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "name": {
-                        "type": "string"
-                    }
-                },
-                "required": [
-                    "name"
-                ]
-            }
-        }
-    },
-    {
-        "type": "function",
-        "function": {
-            "name": "openspace.iswa.removeGroup",
-            "description": "Remove a group of Cygnets.",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "name": {
-                        "type": "string"
-                    }
-                },
-                "required": [
-                    "name"
-                ]
-            }
-        }
-    },
-    {
-        "type": "function",
-        "function": {
-            "name": "openspace.iswa.removeScreenSpaceCygnet",
-            "description": "Remove a Screen Space Cygnets.",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "id": {
-                        "type": "number"
-                    }
-                },
-                "required": [
-                    "id"
-                ]
-            }
-        }
-    },
-    {
-        "type": "function",
-        "function": {
-            "name": "openspace.iswa.setBaseUrl",
-            "description": "Sets the base url.",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "url": {
-                        "type": "string"
-                    }
-                },
-                "required": [
-                    "url"
                 ]
             }
         }

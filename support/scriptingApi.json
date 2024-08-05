@@ -401,7 +401,13 @@
         }
       },
       {
-        "arguments": [],
+        "arguments": [
+          {
+            "defaultValue": "",
+            "name": "uri",
+            "type": "String"
+          }
+        ],
         "help": "Returns the value the property, identified by the provided URI. Deprecated in favor of the 'propertyValue' function",
         "name": "getPropertyValue",
         "returnType": "",
@@ -723,8 +729,14 @@
         }
       },
       {
-        "arguments": [],
-        "help": "Returns the value the property, identified by the provided URI. Deprecated in favor of the 'propertyValue' function",
+        "arguments": [
+          {
+            "defaultValue": "",
+            "name": "uri",
+            "type": "String"
+          }
+        ],
+        "help": "Returns the value the property, identified by the provided URI. ",
         "name": "propertyValue",
         "returnType": "",
         "sourceLocation": {
@@ -1015,7 +1027,33 @@
         }
       },
       {
-        "arguments": [],
+        "arguments": [
+          {
+            "defaultValue": "",
+            "name": "uri",
+            "type": "String"
+          },
+          {
+            "defaultValue": "",
+            "name": "value",
+            "type": ""
+          },
+          {
+            "defaultValue": "",
+            "name": "duration",
+            "type": "Number?"
+          },
+          {
+            "defaultValue": "",
+            "name": "easing",
+            "type": "String"
+          },
+          {
+            "defaultValue": "",
+            "name": "postscript",
+            "type": "String"
+          }
+        ],
         "help": "Sets all property(s) identified by the URI (with potential wildcards) in the first argument. The second argument can be any type, but it has to match the type that the property (or properties) expect. If the third is not present or is '0', the value changes instantly, otherwise the change will take that many seconds and the value is interpolated at each step in between. The fourth parameter is an optional easing function if a 'duration' has been specified. If 'duration' is 0, this parameter value is ignored. Otherwise, it can be one of many supported easing functions. See easing.h for available functions. The fifth argument is another Lua script that will be executed when the interpolation provided in parameter 3 finishes.\nThe URI is interpreted using a wildcard in which '*' is expanded to '(.*)' and bracketed components '{ }' are interpreted as group tag names. Then, the passed value will be set on all properties that fit the regex + group name combination.",
         "name": "setPropertyValue",
         "returnType": "",
@@ -1025,7 +1063,33 @@
         }
       },
       {
-        "arguments": [],
+        "arguments": [
+          {
+            "defaultValue": "",
+            "name": "uri",
+            "type": "String"
+          },
+          {
+            "defaultValue": "",
+            "name": "value",
+            "type": ""
+          },
+          {
+            "defaultValue": "",
+            "name": "duration",
+            "type": "Number?"
+          },
+          {
+            "defaultValue": "",
+            "name": "easing",
+            "type": "String"
+          },
+          {
+            "defaultValue": "",
+            "name": "postscript",
+            "type": "String"
+          }
+        ],
         "help": "Sets the property identified by the URI in the first argument. The second argument can be any type, but it has to match the type that the property expects. If the third is not present or is '0', the value changes instantly, otherwise the change will take that many seconds and the value is interpolated at each step in between. The fourth parameter is an optional easing function if a 'duration' has been specified. If 'duration' is 0, this parameter value is ignored. Otherwise, it has to be one of the easing functions defined in the list below. This is the same as calling the setValue method and passing 'single' as the fourth argument to setPropertyValue. The fifth argument is another Lua script that will be executed when the interpolation provided in parameter 3 finishes.\n Avaiable easing functions: Linear, QuadraticEaseIn, QuadraticEaseOut, QuadraticEaseInOut, CubicEaseIn, CubicEaseOut, CubicEaseInOut, QuarticEaseIn, QuarticEaseOut, QuarticEaseInOut, QuinticEaseIn, QuinticEaseOut, QuinticEaseInOut, SineEaseIn, SineEaseOut, SineEaseInOut, CircularEaseIn, CircularEaseOut, CircularEaseInOut, ExponentialEaseIn, ExponentialEaseOut, ExponentialEaseInOut, ElasticEaseIn, ElasticEaseOut, ElasticEaseInOut, BounceEaseIn, BounceEaseOut, BounceEaseInOut",
         "name": "setPropertyValueSingle",
         "returnType": "",
@@ -3003,156 +3067,6 @@
     ],
     "library": "globebrowsing",
     "name": "globebrowsing"
-  },
-  {
-    "fullName": "openspace.iswa",
-    "functions": [
-      {
-        "arguments": [
-          {
-            "defaultValue": "",
-            "name": "path",
-            "type": "String"
-          }
-        ],
-        "help": "Adds a cdf files to choose from.",
-        "name": "addCdfFiles",
-        "returnType": "",
-        "sourceLocation": {
-          "file": "modules/iswa/util/iswamanager_lua.inl",
-          "line": 117
-        }
-      },
-      {
-        "arguments": [
-          {
-            "defaultValue": "-1",
-            "name": "id",
-            "type": "Integer?"
-          },
-          {
-            "defaultValue": "\"Texture\"",
-            "name": "type",
-            "type": "String?"
-          },
-          {
-            "defaultValue": "\"\"",
-            "name": "group",
-            "type": "String?"
-          }
-        ],
-        "help": "Adds a IswaCygnet.",
-        "name": "addCygnet",
-        "returnType": "",
-        "sourceLocation": {
-          "file": "modules/iswa/util/iswamanager_lua.inl",
-          "line": 28
-        }
-      },
-      {
-        "arguments": [
-          {
-            "defaultValue": "",
-            "name": "group",
-            "type": "String"
-          },
-          {
-            "defaultValue": "",
-            "name": "pos",
-            "type": "Integer"
-          }
-        ],
-        "help": "Adds KameleonPlanes from cdf file.",
-        "name": "addKameleonPlanes",
-        "returnType": "",
-        "sourceLocation": {
-          "file": "modules/iswa/util/iswamanager_lua.inl",
-          "line": 122
-        }
-      },
-      {
-        "arguments": [
-          {
-            "defaultValue": "",
-            "name": "d",
-            "type": "Table"
-          }
-        ],
-        "help": "Adds a Screen Space Cygnets.",
-        "name": "addScreenSpaceCygnet",
-        "returnType": "",
-        "sourceLocation": {
-          "file": "modules/iswa/util/iswamanager_lua.inl",
-          "line": 35
-        }
-      },
-      {
-        "arguments": [
-          {
-            "defaultValue": "",
-            "name": "name",
-            "type": "String"
-          }
-        ],
-        "help": "Remove a Cygnets.",
-        "name": "removeCygnet",
-        "returnType": "",
-        "sourceLocation": {
-          "file": "modules/iswa/util/iswamanager_lua.inl",
-          "line": 70
-        }
-      },
-      {
-        "arguments": [
-          {
-            "defaultValue": "",
-            "name": "name",
-            "type": "String"
-          }
-        ],
-        "help": "Remove a group of Cygnets.",
-        "name": "removeGroup",
-        "returnType": "",
-        "sourceLocation": {
-          "file": "modules/iswa/util/iswamanager_lua.inl",
-          "line": 106
-        }
-      },
-      {
-        "arguments": [
-          {
-            "defaultValue": "",
-            "name": "id",
-            "type": "Integer"
-          }
-        ],
-        "help": "Remove a Screen Space Cygnets.",
-        "name": "removeScreenSpaceCygnet",
-        "returnType": "",
-        "sourceLocation": {
-          "file": "modules/iswa/util/iswamanager_lua.inl",
-          "line": 80
-        }
-      },
-      {
-        "arguments": [
-          {
-            "defaultValue": "",
-            "name": "url",
-            "type": "String"
-          }
-        ],
-        "help": "Sets the base url.",
-        "name": "setBaseUrl",
-        "returnType": "",
-        "sourceLocation": {
-          "file": "modules/iswa/util/iswamanager_lua.inl",
-          "line": 127
-        }
-      }
-    ],
-    "library": "iswa",
-    "name": "iswa"
   },
   {
     "fullName": "openspace.modules",
@@ -5338,7 +5252,7 @@
         "returnType": "Integer",
         "sourceLocation": {
           "file": "src/util/spicemanager_lua.inl",
-          "line": 143
+          "line": 144
         }
       },
       {
@@ -5348,7 +5262,7 @@
         "returnType": "Path[]",
         "sourceLocation": {
           "file": "src/util/spicemanager_lua.inl",
-          "line": 76
+          "line": 77
         }
       },
       {
@@ -5364,7 +5278,7 @@
         "returnType": "",
         "sourceLocation": {
           "file": "src/util/spicemanager_lua.inl",
-          "line": 33
+          "line": 34
         }
       },
       {
@@ -5395,7 +5309,7 @@
         "returnType": "vec3",
         "sourceLocation": {
           "file": "src/util/spicemanager_lua.inl",
-          "line": 120
+          "line": 121
         }
       },
       {
@@ -5421,7 +5335,7 @@
         "returnType": "mat3x3",
         "sourceLocation": {
           "file": "src/util/spicemanager_lua.inl",
-          "line": 100
+          "line": 101
         }
       },
       {
@@ -5437,7 +5351,7 @@
         "returnType": "String -> String",
         "sourceLocation": {
           "file": "src/util/spicemanager_lua.inl",
-          "line": 84
+          "line": 85
         }
       },
       {
@@ -5453,7 +5367,7 @@
         "returnType": "",
         "sourceLocation": {
           "file": "src/util/spicemanager_lua.inl",
-          "line": 60
+          "line": 61
         }
       }
     ],
