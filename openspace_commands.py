@@ -1,7 +1,7 @@
 import textwrap
 
 def asciify(text):
-    return text.replace('°', 'deg')
+    return text.replace('°', 'deg').replace('’', '\'').replace('**', '')
 
 def _wrap(text):
     text = asciify(text)

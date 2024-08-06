@@ -124,10 +124,24 @@ class AIEventHandler(AsyncAssistantEventHandler):
         for tool_call in data.required_action.submit_tool_outputs.tool_calls:
             fn = 'openspace.' + tool_call.function.name.replace('_', '.')
             args = json.loads(tool_call.function.arguments) if tool_call.function.arguments else {}
+
             print(f'assistant> [calling {tool_call.function.name} with args {args}]')
             res = await os.executeLuaFunction(fn, list(args.values()), True)
-            res = json.dumps(res)
+
+            if res is None: # command succeeded
+                if 'duration' in args:
+                    print(f'assistant> [sleeping {args['duration']}s]')
+                    await asyncio.sleep(args['duration'])
+                if 'fadeDuration' in args:
+                    print(f'assistant> [sleeping {args['fadeDuration']}s]')
+                    await asyncio.sleep(args['fadeDuration'])
+                if 'fadeTime' in args:
+                    print(f'assistant> [sleeping {args['fadeTime']}s]')
+                    await asyncio.sleep(args['fadeTime'])
+                res = 'success'
+
             print(f' -> call res: {res}')
+            res = json.dumps(res)
             outputs.append({
                 'tool_call_id': tool_call.id,
                 'output': res
@@ -143,9 +157,9 @@ class AIEventHandler(AsyncAssistantEventHandler):
 
 
 class AI:
-    def __init__(self, location, date, targets):
-        self.start_location = location
-        self.start_date = date
+    def __init__(self, node, date, targets):
+        self.node = node
+        self.date = date
         self.targets = targets
 
     async def init(self):
@@ -160,13 +174,19 @@ class AI:
             content=prompt
         )
 
+        instructions = f"current node: {self.node}\ncurrent date: {self.date}\nvisible targets: {self.targets}"
+
         async with self.client.beta.threads.runs.stream(
             thread_id=self.thread.id,
             assistant_id=self.assistant.id,
             event_handler=AIEventHandler(self, os, lua),
+            additional_instructions=instructions
         ) as stream:
             await stream.until_done()
             print('stream done')
+            self.node = await oscmd.target(lua)
+            self.targets = args.targets or await oscmd.visible_targets(os, lua)
+            self.date = await oscmd.date(lua)
 
 
 async def keyboard_prompt():

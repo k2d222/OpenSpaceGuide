@@ -51,7 +51,7 @@ whitelist = [
     # 'openspace.makeIdentifier',
     # 'openspace.markInterestingNodes',
     # 'openspace.markInterestingTimes',
-    'openspace.nodeByRenderableType',
+    # 'openspace.nodeByRenderableType',
     # 'openspace.printDebug',
     # 'openspace.printError',
     # 'openspace.printFatal',
@@ -91,8 +91,8 @@ whitelist = [
     # 'openspace.walkDirectory',
     # 'openspace.walkDirectoryFiles',
     # 'openspace.walkDirectoryFolders',
-    'openspace.worldPosition',
-    'openspace.worldRotation',
+    # 'openspace.worldPosition',
+    # 'openspace.worldRotation',
     # 'openspace.writeDocumentation',
 
     # 'openspace.action.action',
@@ -152,8 +152,8 @@ whitelist = [
 
     # 'openspace.exoplanets.addExoplanetSystem',
     # 'openspace.exoplanets.getListOfExoplanets', # deprecated
-    'openspace.exoplanets.listAvailableExoplanetSystems',
-    'openspace.exoplanets.listOfExoplanets',
+    # 'openspace.exoplanets.listAvailableExoplanetSystems',
+    # 'openspace.exoplanets.listOfExoplanets',
     # 'openspace.exoplanets.loadExoplanetsFromCsv',
     # 'openspace.exoplanets.removeExoplanetSystem',
 
@@ -398,6 +398,17 @@ tools_whitelisted = [t for t in tools if t['function']['name'] in whitelist]
 for t in tools_whitelisted:
     t['function']['name'] = t['function']['name'].replace('openspace.', '').replace('.', '_')
     t['function']['description'] = t['function']['description'][:1000]
+
+    # if t['function']['name'] in ['fadeIn', 'fadeOut']:
+    #     t['function']['parameters']['required'].append('fadeTime')
+
+    if t['function']['name'] == 'pathnavigation_flyTo':
+        t['function']['parameters']['required'].append('duration')
+
+    if t['function']['name'] == 'globebrowsing_jumpToGeo':
+        t['function']['parameters']['required'].append('altitude')
+    if t['function']['name'] == 'globebrowsing_flyToGeo':
+        t['function']['parameters']['required'].append('duration')
 
 if len(tools_whitelisted) != len(whitelist):
     print('[WARN] some whitelisted functions were not found.')
