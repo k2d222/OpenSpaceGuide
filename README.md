@@ -6,6 +6,9 @@
 ---
 
 This repo contains a script for piloting an [OpenSpace](https://github.com/OpenSpace/OpenSpace/) instance with OpenAI's GPT4 and Whisper.
+
+See the poster presented at IEEE Vis 2024 — [poster.pdf](poster.pdf)
+
 More details about this project on OSF — [https://osf.io/jcgzt/](https://osf.io/jcgzt/)
 
 ## Instructions
